@@ -40,31 +40,43 @@ def Find(dict, key):
     for k, v in dict.items():
         if k.startswith(key):
             return v
+    return None
 
 def CharacterCmd(characters, items, argument):
-    char = None;
-    if argument in characters:
-        char = characters[argument]
+    charName = argument
+
+    char = None
+    if charName in characters:
+        char = characters[charName]
     else:
-        char = Find(characters, argument)
+        char = Find(characters, charName)
 
     if char is None:
-        print("Character not found: ", argument)
+        print("Character not found: ", charName)
         return
 
     if char:
         print(char.name)
         char.printRecv()
 
+def ItemCMD(characters, items, argument):
+    itemName = argument
+
+    print("Item was received by")
+    for name, char in characters.items():
+        for id, item in char.recv.items():
+            if item["name"].startswith(itemName):
+                print(name, "\t", item["name"], "\t", item["pivot"]["received_at"])
+
 def main():
     parser = argparse.ArgumentParser(prog='TMBConsultor', description='Queries TMB for quick searches', epilog='Call with --help to find a list of available commands')
-    parser.add_argument("action", choices=["character"])
+    parser.add_argument("action", choices=["character", "item"])
     parser.add_argument("argument", type=str)
     args = parser.parse_args()
 
     action, argument = args.action, args.argument
 
-    commands = {"character" : CharacterCmd}
+    commands = {"character" : CharacterCmd, "item" : ItemCMD}
     characters, items = ReadDataFromJson("character-json.json")
 
     print("Action chosen: ", action)
