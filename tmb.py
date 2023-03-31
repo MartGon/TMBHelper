@@ -3,11 +3,6 @@ import cmd
 import json
 import datetime
 
-class Item:
-    
-    def __init__(self, item_json):
-        self.name = item_json["name"]
-
 class Character:
 
     def __init__(self, char_json):
@@ -119,22 +114,47 @@ class TMBHelperCMD(cmd.Cmd):
             self.print_list(history, ["Received by", "Item Name", "Date"], ['character', 'itemName','sort_by'])
 
         if action is None or action == "wishlist":
-            wishlist = self.get_items(itemName, lambda x : x.wishlist.items(), lambda x : x["order"], False, lambda x : "Yes" if x["is_received"] else "No")
-            self.print_list(wishlist, ["Wishlisted by", "Item Name", "Order", "Received"], ['character', 'itemName','sort_by', 'extra'])
+            wishlist = self.get_items(itemName, lambda x : x.wishlist.items(), lambda x : x["order"], False, {"is_received" : lambda i, c : "Yes" if i["is_received"] else "No"})
+            self.print_list(wishlist, ["Wishlisted by", "Item Name", "Order", "Received"], ['character', 'itemName','sort_by', 'is_received'])
 
         if action is None or action == "prio":
-            prios = self.get_items(itemName, lambda x : x.prios.items(), lambda x : x["order"], False, lambda x : "Yes" if x["is_received"] else "No")
-            self.print_list(prios, ["Prioritized to", "Item Name", "Priority", "Received"], ['character', 'itemName','sort_by', 'extra'])
+            prios = self.get_items(itemName, lambda x : x.prios.items(), lambda x : x["order"], False, 
+                {"is_received" : lambda i, c : "Yes" if i["is_received"] else "No", "updated_prio" : lambda i, c : self.get_updated_prio(i["id"], c)})
+            self.print_list(prios, ["Prioritized to", "Item Name", "Priority", "Actual Prio", "Received"], ['character', 'itemName','sort_by', 'updated_prio', 'is_received'])
 
-    def get_items(self, itemName, itemList, sort_by, reverse=True, extra=lambda x : None):
+    def get_items(self, itemName, itemList, sort_by, reverse=True, extra={}):
         items = []
         for name, char in self.characters.items():
             for id, item in itemList(char):
                 if itemName.lower() in item["name"].lower() :
-                    items.append({"character" : name, "itemName" : item["name"], "sort_by" : sort_by(item), "extra" : extra(item)})
+                    i = {"character" : name, "itemName" : item["name"], "sort_by" : sort_by(item)}
+                    for k, e in extra.items():
+                        i[k] = e(item, char)
+                    items.append(i)
+                    
         items.sort(key = lambda x : x["sort_by"], reverse=reverse)
         return items
     
+    def get_updated_prio(self, itemId, char):
+        prio = 0
+        if not itemId in char.prios or itemId in char.recv:
+            return prio
+        
+        updated_prio = 1
+        checked_prio = 1
+        while char.prios[itemId]['order'] > checked_prio:
+
+            for name, c in self.characters.items():
+                if itemId in c.prios:
+                    c_prio = c.prios[itemId]["order"]
+                    if updated_prio == c_prio and c != char:
+                        if not itemId in c.recv:
+                            updated_prio = updated_prio + 1
+                        checked_prio = checked_prio + 1
+
+        return updated_prio
+
+
     def print_list(self, itemList, columns, keys):
         for col in columns:
             print("{0:<32s}\t".format(col), end='')
