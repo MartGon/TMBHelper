@@ -147,7 +147,7 @@ class TMBHelperCMD(cmd.Cmd):
             for name, c in self.characters.items():
                 if itemId in c.prios:
                     c_prio = c.prios[itemId]["order"]
-                    if updated_prio == c_prio and c != char:
+                    if checked_prio == c_prio and c != char:
                         if not itemId in c.recv:
                             updated_prio = updated_prio + 1
                         checked_prio = checked_prio + 1
