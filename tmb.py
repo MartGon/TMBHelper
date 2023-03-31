@@ -1,4 +1,5 @@
 import argparse
+import cmd
 import json
 
 class Item:
@@ -42,45 +43,72 @@ def Find(dict, key):
             return v
     return None
 
-def CharacterCmd(characters, items, argument):
-    charName = argument
+class TMBHelperCMD(cmd.Cmd):
+    intro = "Welcome to TMBHelper. Type help or ? to list commands"
+    prompt = "\nPlease, type a command\n\n"
 
-    char = None
-    if charName in characters:
-        char = characters[charName]
-    else:
-        char = Find(characters, charName)
+    def do_character(self, argument):
+        'Retrieve information regarding a character loot history, wishlist or prios'
+        charName = argument
+        characters = self.characters
 
-    if char is None:
-        print("Character not found: ", charName)
-        return
+        char = None
+        if charName in characters:
+            char = characters[charName]
+        else:
+            char = Find(characters, charName)
 
-    if char:
-        print(char.name)
-        char.printRecv()
+        if char is None:
+            print("Character not found: ", charName)
+            return
 
-def ItemCMD(characters, items, argument):
-    itemName = argument
+        if char:
+            print(char.name)
+            char.printRecv()
 
-    print("Item was received by")
-    for name, char in characters.items():
-        for id, item in char.recv.items():
-            if item["name"].startswith(itemName):
-                print(name, "\t", item["name"], "\t", item["pivot"]["received_at"])
+    def do_item(self, args):
+        'Retrieve information regarding a specific item in loot history, wishlist or prios'
+
+        args = self.parse(args)
+        print(args)
+        if len(args) == 0:
+            print("Need arguments")
+            return
+        
+        action = None
+        itemName = args[0]
+        if args[0] in ['wishlist', 'prio', 'history']:
+            action = args[0]
+            itemName = args[1]
+        
+        characters = self.characters
+        print("{0:<12s}\t{1:<32s}\t{2:<32s}".format("Received by", "Name", "Date"))
+        for name, char in characters.items():
+            for id, item in char.recv.items():
+                if item["name"].lower().startswith(itemName.lower()):
+                    #print(name, "\t\t\t", item["name"], "\t\t\t", item["pivot"]["received_at"])
+                    print("{0:<12s}\t{1:<32s}\t{2:<32s}".format(name, item["name"], item["pivot"]["received_at"]))
+
+    def do_exit(self, argument):
+        'Exits the program'
+        print("Exitting...")
+        exit(0)
+    
+    def parse(self, args):
+        char = '"' if '"' in args else ' '
+        return list(map(lambda x : x.strip(), filter(lambda x : bool(x), args.split(char))))
+
+global characters
 
 def main():
     parser = argparse.ArgumentParser(prog='TMBConsultor', description='Queries TMB for quick searches', epilog='Call with --help to find a list of available commands')
-    parser.add_argument("action", choices=["character", "item"])
-    parser.add_argument("argument", type=str)
+    parser.add_argument("--file", default="character-json.json")
     args = parser.parse_args()
 
-    action, argument = args.action, args.argument
-
-    commands = {"character" : CharacterCmd, "item" : ItemCMD}
-    characters, items = ReadDataFromJson("character-json.json")
-
-    print("Action chosen: ", action)
-    commands[action](characters, items, argument)
+    characters, items = ReadDataFromJson(args.file)
+    cmd = TMBHelperCMD()
+    cmd.characters = characters
+    cmd.cmdloop()
 
 
 if __name__ == "__main__":
