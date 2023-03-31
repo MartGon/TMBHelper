@@ -12,19 +12,20 @@ class Character:
 
     def __init__(self, char_json):
         self.name = char_json["name"]
-        self.recv = Character.extract_items_info(char_json["received"])
-        self.wishlist = Character.extract_items_info(char_json["wishlist"])
-        self.prios = Character.extract_items_info(char_json["prios"])
+        self.recv = Character.extract_items_info(char_json["received"], ["received_at", "is_offspec", "officer_note"])
+        self.wishlist = Character.extract_items_info(char_json["wishlist"], ["is_received", "order"])
+        self.prios = Character.extract_items_info(char_json["prios"], ["is_received", "order"])
     
-    def extract_items_info(recv_json):
+    def extract_items_info(recv_json, pivot_keys):
         recv = {}
         for i in recv_json:
-            recv[i["id"]] = i
+            item = {"name" : i["name"], "id" : i["id"]}
+            for pk in pivot_keys:
+                if pk in i["pivot"]:
+                    item[pk] = i["pivot"][pk]
+
+            recv[i["id"]] = item
         return recv
-    
-    def printRecv(self):
-        for k, v in self.recv.items():
-            print("Item name: ", v["name"])
 
 def ReadDataFromJson(json_path):
 
@@ -48,10 +49,16 @@ class TMBHelperCMD(cmd.Cmd):
     intro = "Welcome to TMBHelper. Type help or ? to list commands"
     prompt = "\nPlease, type a command\n\n"
 
-    def do_character(self, argument):
+    def do_char(self, args):
         'Retrieve information regarding a character loot history, wishlist or prios'
-        charName = argument
         characters = self.characters
+
+        args = self.parse(args)
+        if len(args) == 0:
+            print("")
+            return
+        
+        action, charName = self.get_action_and_name(args)
 
         char = None
         if charName in characters:
@@ -64,48 +71,79 @@ class TMBHelperCMD(cmd.Cmd):
             return
 
         if char:
-            print(char.name)
-            char.printRecv()
+            if action is None or action == "history":
+                history = self.get_char_items(char.recv.items(), lambda x : datetime.datetime.strptime(x["received_at"], "%Y-%m-%d %H:%M:%S").date(), True, lambda x : "Yes" if x["id"] in char.wishlist else "No")
+
+                print("Items received by {0}".format(char.name))
+                self.print_list(history, ["Item Name", "Date", "Wishlisted"], ['itemName','sort_by', 'extra'])
+
+            if action is None or action == "wishlist":
+                wishlist = self.get_char_items(char.wishlist.items(), lambda x : x["order"], False, lambda x : "Yes" if x["is_received"] else "No")
+
+                print("Items wishlisted by {0}".format(char.name))
+                self.print_list(wishlist, ["Item Name", "Order", "Received"], ['itemName','sort_by', 'extra'])
+
+            if action is None or action == "prio":
+                prios = self.get_char_items(char.prios.items(), lambda x : x["order"], False, lambda x : "Yes" if x["is_received"] else "No")
+
+                print("Items prioritized to {0}".format(char.name))
+                self.print_list(prios, ["Item Name", "Priority", "Received"], ['itemName','sort_by', 'extra'])
+
+    def get_char_items(self, itemList, sort_by, reverse=True, extra=lambda x : None):
+        items = []
+        for id, item in itemList:
+                items.append({"itemName" : item["name"], "sort_by" : sort_by(item), "extra" : extra(item)})
+        items.sort(key = lambda x : x["sort_by"], reverse=reverse)
+        return items
+    
+    def get_action_and_name(self, args):
+        action = None
+        name = args[0]
+        if args[0] in ['wishlist', 'prio', 'history']:
+            action = args[0]
+            name = args[1]
+        return action, name
 
     def do_item(self, args):
         'Retrieve information regarding a specific item in loot history, wishlist or prios\n [history, wishlist, prio]'
 
         args = self.parse(args)
         if len(args) == 0:
-            print("Need arguments.")
+            print("")
             return
-        
-        action = None
-        itemName = args[0]
-        if args[0] in ['wishlist', 'prio', 'history']:
-            action = args[0]
-            itemName = args[1]
+
+        action, itemName = self.get_action_and_name(args)
         
         if action is None or action == "history":
-            history = self.get_items(itemName, lambda x : x.recv.items(), lambda x : datetime.datetime.strptime(x["pivot"]["received_at"], "%Y-%m-%d %H:%M:%S").date())
-            self.print_items(history, "Received by", "Date")
+            history = self.get_items(itemName, lambda x : x.recv.items(), lambda x : datetime.datetime.strptime(x["received_at"], "%Y-%m-%d %H:%M:%S").date())
+            self.print_list(history, ["Received by", "Item Name", "Date"], ['character', 'itemName','sort_by'])
 
         if action is None or action == "wishlist":
-            wishlist = self.get_items(itemName, lambda x : x.wishlist.items(), lambda x : x["pivot"]["order"], False)
-            self.print_items(wishlist, "Wishlisted by", "Order")
+            wishlist = self.get_items(itemName, lambda x : x.wishlist.items(), lambda x : x["order"], False, lambda x : "Yes" if x["is_received"] else "No")
+            self.print_list(wishlist, ["Wishlisted by", "Item Name", "Order", "Received"], ['character', 'itemName','sort_by', 'extra'])
 
         if action is None or action == "prio":
-            prios = self.get_items(itemName, lambda x : x.prios.items(), lambda x : x["pivot"]["order"], False, lambda x : "Yes" if x["pivot"]["is_received"] else "No")
-            self.print_items(prios, "Prioritized to", "Priority", "Received")
+            prios = self.get_items(itemName, lambda x : x.prios.items(), lambda x : x["order"], False, lambda x : "Yes" if x["is_received"] else "No")
+            self.print_list(prios, ["Prioritized to", "Item Name", "Priority", "Received"], ['character', 'itemName','sort_by', 'extra'])
 
     def get_items(self, itemName, itemList, sort_by, reverse=True, extra=lambda x : None):
         items = []
         for name, char in self.characters.items():
             for id, item in itemList(char):
-                if item["name"].lower().startswith(itemName.lower()):
+                if itemName.lower() in item["name"].lower() :
                     items.append({"character" : name, "itemName" : item["name"], "sort_by" : sort_by(item), "extra" : extra(item)})
         items.sort(key = lambda x : x["sort_by"], reverse=reverse)
         return items
     
-    def print_items(self, itemList, firstCol, thirdCol, extraCol="Extra"):
-        print("{0:<12s}\t{1:<32s}\t{2:<32s}\t{3:<16s}".format(firstCol, "Item Name", thirdCol, extraCol))
+    def print_list(self, itemList, columns, keys):
+        for col in columns:
+            print("{0:<32s}\t".format(col), end='')
+        print()
+
         for v in itemList:
-            print("{0:<12s}\t{1:<32s}\t{2:<32s}\t{3:<16s}".format(v["character"], v["itemName"], str(v["sort_by"]), str(v["extra"])))
+            for k in keys:
+                print("{0:<32s}\t".format(str(v[k])), end='')
+            print()
         print()
 
     def do_exit(self, argument):
