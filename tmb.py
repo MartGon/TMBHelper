@@ -1,6 +1,7 @@
 import argparse
 import cmd
 import json
+import datetime
 
 class Item:
     
@@ -67,12 +68,11 @@ class TMBHelperCMD(cmd.Cmd):
             char.printRecv()
 
     def do_item(self, args):
-        'Retrieve information regarding a specific item in loot history, wishlist or prios'
+        'Retrieve information regarding a specific item in loot history, wishlist or prios\n [history, wishlist, prio]'
 
         args = self.parse(args)
-        print(args)
         if len(args) == 0:
-            print("Need arguments")
+            print("Need arguments.")
             return
         
         action = None
@@ -81,13 +81,32 @@ class TMBHelperCMD(cmd.Cmd):
             action = args[0]
             itemName = args[1]
         
-        characters = self.characters
-        print("{0:<12s}\t{1:<32s}\t{2:<32s}".format("Received by", "Name", "Date"))
-        for name, char in characters.items():
-            for id, item in char.recv.items():
+        if action is None or action == "history":
+            history = self.get_items(itemName, lambda x : x.recv.items(), lambda x : datetime.datetime.strptime(x["pivot"]["received_at"], "%Y-%m-%d %H:%M:%S").date())
+            self.print_items(history, "Received by", "Date")
+
+        if action is None or action == "wishlist":
+            wishlist = self.get_items(itemName, lambda x : x.wishlist.items(), lambda x : x["pivot"]["order"], False)
+            self.print_items(wishlist, "Wishlisted by", "Order")
+
+        if action is None or action == "prio":
+            prios = self.get_items(itemName, lambda x : x.prios.items(), lambda x : x["pivot"]["order"], False, lambda x : "Yes" if x["pivot"]["is_received"] else "No")
+            self.print_items(prios, "Prioritized to", "Priority", "Received")
+
+    def get_items(self, itemName, itemList, sort_by, reverse=True, extra=lambda x : None):
+        items = []
+        for name, char in self.characters.items():
+            for id, item in itemList(char):
                 if item["name"].lower().startswith(itemName.lower()):
-                    #print(name, "\t\t\t", item["name"], "\t\t\t", item["pivot"]["received_at"])
-                    print("{0:<12s}\t{1:<32s}\t{2:<32s}".format(name, item["name"], item["pivot"]["received_at"]))
+                    items.append({"character" : name, "itemName" : item["name"], "sort_by" : sort_by(item), "extra" : extra(item)})
+        items.sort(key = lambda x : x["sort_by"], reverse=reverse)
+        return items
+    
+    def print_items(self, itemList, firstCol, thirdCol, extraCol="Extra"):
+        print("{0:<12s}\t{1:<32s}\t{2:<32s}\t{3:<16s}".format(firstCol, "Item Name", thirdCol, extraCol))
+        for v in itemList:
+            print("{0:<12s}\t{1:<32s}\t{2:<32s}\t{3:<16s}".format(v["character"], v["itemName"], str(v["sort_by"]), str(v["extra"])))
+        print()
 
     def do_exit(self, argument):
         'Exits the program'
