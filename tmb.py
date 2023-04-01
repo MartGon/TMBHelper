@@ -10,7 +10,7 @@ class Character:
         self.recv = Character.extract_items_info(char_json["received"], ["received_at", "is_offspec", "officer_note"])
         self.wishlist = Character.extract_items_info(char_json["wishlist"], ["is_received", "order"])
         self.prios = Character.extract_items_info(char_json["prios"], ["is_received", "order"])
-    
+
     def extract_items_info(recv_json, pivot_keys):
         recv = {}
         for i in recv_json:
@@ -67,27 +67,34 @@ class TMBHelperCMD(cmd.Cmd):
 
         if char:
             if action is None or action == "history":
-                history = self.get_char_items(char.recv.items(), lambda x : datetime.datetime.strptime(x["received_at"], "%Y-%m-%d %H:%M:%S").date(), True, lambda x : "Yes" if x["id"] in char.wishlist else "No")
+                sort_by = lambda x : datetime.datetime.strptime(x["received_at"], "%Y-%m-%d %H:%M:%S").date()
+                extra = {"is_wishlisted" : lambda x : "Yes" if x["id"] in char.wishlist else "No"}
+                history = self.get_char_items(char.recv.items(), sort_by, True, extra)
 
                 print("Items received by {0}".format(char.name))
-                self.print_list(history, ["Item Name", "Date", "Wishlisted"], ['itemName','sort_by', 'extra'])
+                self.print_list(history, ["Item Name", "Date", "Wishlisted"], ['itemName','sort_by', 'is_wishlisted'])
 
             if action is None or action == "wishlist":
-                wishlist = self.get_char_items(char.wishlist.items(), lambda x : x["order"], False, lambda x : "Yes" if x["is_received"] else "No")
+                extra = {"is_received" : lambda x : "Yes" if x["is_received"] else "No"}
+                wishlist = self.get_char_items(char.wishlist.items(), lambda x : x["order"], False, extra)
 
                 print("Items wishlisted by {0}".format(char.name))
-                self.print_list(wishlist, ["Item Name", "Order", "Received"], ['itemName','sort_by', 'extra'])
+                self.print_list(wishlist, ["Item Name", "Order", "Received"], ['itemName','sort_by', 'is_received'])
 
             if action is None or action == "prio":
-                prios = self.get_char_items(char.prios.items(), lambda x : x["order"], False, lambda x : "Yes" if x["is_received"] else "No")
+                extra = {"is_received" : lambda i : "Yes" if i["is_received"] else "No", "updated_prio" : lambda i : self.get_updated_prio(i["id"], char)}
+                prios = self.get_char_items(char.prios.items(), lambda x : x["order"], False, extra)
 
                 print("Items prioritized to {0}".format(char.name))
-                self.print_list(prios, ["Item Name", "Priority", "Received"], ['itemName','sort_by', 'extra'])
+                self.print_list(prios, ["Item Name", "Priority", "Updated Prio", "Received"], ['itemName','sort_by', 'updated_prio', 'is_received'])
 
-    def get_char_items(self, itemList, sort_by, reverse=True, extra=lambda x : None):
+    def get_char_items(self, itemList, sort_by, reverse=True, extra={}):
         items = []
         for id, item in itemList:
-                items.append({"itemName" : item["name"], "sort_by" : sort_by(item), "extra" : extra(item)})
+            i = {"itemName" : item["name"], "sort_by" : sort_by(item)}
+            for k, e in extra.items():
+                i[k] = e(item)
+            items.append(i)
         items.sort(key = lambda x : x["sort_by"], reverse=reverse)
         return items
     
@@ -110,16 +117,18 @@ class TMBHelperCMD(cmd.Cmd):
         action, itemName = self.get_action_and_name(args)
         
         if action is None or action == "history":
-            history = self.get_items(itemName, lambda x : x.recv.items(), lambda x : datetime.datetime.strptime(x["received_at"], "%Y-%m-%d %H:%M:%S").date())
+            sort_by = lambda x : datetime.datetime.strptime(x["received_at"], "%Y-%m-%d %H:%M:%S").date()
+            history = self.get_items(itemName, lambda x : x.recv.items(), sort_by)
             self.print_list(history, ["Received by", "Item Name", "Date"], ['character', 'itemName','sort_by'])
 
         if action is None or action == "wishlist":
-            wishlist = self.get_items(itemName, lambda x : x.wishlist.items(), lambda x : x["order"], False, {"is_received" : lambda i, c : "Yes" if i["is_received"] else "No"})
+            extra = {"is_received" : lambda i, c : "Yes" if i["is_received"] else "No"}
+            wishlist = self.get_items(itemName, lambda x : x.wishlist.items(), lambda x : x["order"], False, extra)
             self.print_list(wishlist, ["Wishlisted by", "Item Name", "Order", "Received"], ['character', 'itemName','sort_by', 'is_received'])
 
         if action is None or action == "prio":
-            prios = self.get_items(itemName, lambda x : x.prios.items(), lambda x : x["order"], False, 
-                {"is_received" : lambda i, c : "Yes" if i["is_received"] else "No", "updated_prio" : lambda i, c : self.get_updated_prio(i["id"], c)})
+            extra = {"is_received" : lambda i, c : "Yes" if i["is_received"] else "No", "updated_prio" : lambda i, c : self.get_updated_prio(i["id"], c)}
+            prios = self.get_items(itemName, lambda x : x.prios.items(), lambda x : x["order"], False, extra)
             self.print_list(prios, ["Prioritized to", "Item Name", "Priority", "Actual Prio", "Received"], ['character', 'itemName','sort_by', 'updated_prio', 'is_received'])
 
     def get_items(self, itemName, itemList, sort_by, reverse=True, extra={}):
