@@ -32,7 +32,34 @@ def ReadDataFromJson(json_path):
         for character in res:
             characters[character["name"]] = (Character(character))
     
+    calculate_update_prios(characters)
+
     return characters, items
+
+def calculate_update_prios(characters):
+    
+    for name, char in characters.items():
+        for itemId, item in char.prios.items():
+            item["updated_prio"] = get_updated_prio(characters, itemId, char)
+
+def get_updated_prio(characters, itemId, char):
+    prio = 0
+    if not itemId in char.prios or itemId in char.recv:
+        return prio
+    
+    updated_prio = 1
+    checked_prio = 1
+    while char.prios[itemId]['order'] > checked_prio:
+
+        for name, c in characters.items():
+            if itemId in c.prios:
+                c_prio = c.prios[itemId]["order"]
+                if checked_prio == c_prio and c != char:
+                    if not itemId in c.recv:
+                        updated_prio = updated_prio + 1
+                    checked_prio = checked_prio + 1
+
+    return updated_prio
 
 def Find(dict, key):
     for k, v in dict.items():
@@ -82,7 +109,7 @@ class TMBHelperCMD(cmd.Cmd):
                 self.print_list(wishlist, ["Item Name", "Order", "Received"], ['itemName','sort_by', 'is_received'])
 
             if action is None or action == "prio":
-                extra = {"is_received" : lambda i : "Yes" if i["is_received"] else "No", "updated_prio" : lambda i : self.get_updated_prio(i["id"], char)}
+                extra = {"is_received" : lambda i : "Yes" if i["is_received"] else "No", "updated_prio" : lambda i : i["updated_prio"]}
                 prios = self.get_char_items(char.prios.items(), lambda x : x["order"], False, extra)
 
                 print("Items prioritized to {0}".format(char.name))
@@ -127,7 +154,7 @@ class TMBHelperCMD(cmd.Cmd):
             self.print_list(wishlist, ["Wishlisted by", "Item Name", "Order", "Received"], ['character', 'itemName','sort_by', 'is_received'])
 
         if action is None or action == "prio":
-            extra = {"is_received" : lambda i, c : "Yes" if i["is_received"] else "No", "updated_prio" : lambda i, c : self.get_updated_prio(i["id"], c)}
+            extra = {"is_received" : lambda i, c : "Yes" if i["is_received"] else "No", "updated_prio" : lambda i, c : i["updated_prio"]}
             prios = self.get_items(itemName, lambda x : x.prios.items(), lambda x : x["order"], False, extra)
             self.print_list(prios, ["Prioritized to", "Item Name", "Priority", "Actual Prio", "Received"], ['character', 'itemName','sort_by', 'updated_prio', 'is_received'])
 
@@ -143,26 +170,6 @@ class TMBHelperCMD(cmd.Cmd):
                     
         items.sort(key = lambda x : x["sort_by"], reverse=reverse)
         return items
-    
-    def get_updated_prio(self, itemId, char):
-        prio = 0
-        if not itemId in char.prios or itemId in char.recv:
-            return prio
-        
-        updated_prio = 1
-        checked_prio = 1
-        while char.prios[itemId]['order'] > checked_prio:
-
-            for name, c in self.characters.items():
-                if itemId in c.prios:
-                    c_prio = c.prios[itemId]["order"]
-                    if checked_prio == c_prio and c != char:
-                        if not itemId in c.recv:
-                            updated_prio = updated_prio + 1
-                        checked_prio = checked_prio + 1
-
-        return updated_prio
-
 
     def print_list(self, itemList, columns, keys):
         for col in columns:
@@ -183,9 +190,7 @@ class TMBHelperCMD(cmd.Cmd):
     def parse(self, args):
         char = '"' if '"' in args else ' '
         return list(map(lambda x : x.strip(), filter(lambda x : bool(x), args.split(char))))
-
-global characters
-
+    
 def main():
     parser = argparse.ArgumentParser(prog='TMBConsultor', description='Queries TMB for quick searches', epilog='Call with --help to find a list of available commands')
     parser.add_argument("--file", default="character-json.json")
