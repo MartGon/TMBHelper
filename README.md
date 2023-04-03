@@ -14,13 +14,13 @@ In order to run this program you'll need:
 First run the program
 
 ```
-python3  tmb.py --file character-json.json
+python3  tmbh.py --file character-json.json
 ```
 
 You may download it directly from the server by providing a TMB session cookie and the JSON download url
 
 ```
-python3  tmb.py --cookie eyBsts... --url https://thatsmybis.com/12345/pin-pals/export/characters-with-items/json
+python3  tmbh.py --cookie eyBsts... --url https://thatsmybis.com/12345/pin-pals/export/characters-with-items/json
 ```
 
 Then you'll be greeted with a prompt
@@ -65,7 +65,7 @@ HaroldHunter                            Voldrethar, Dark Blade of Oblivion      
 Check only the wishlist
 
 ```
-item "Voldrethar, Dark Blade of Oblivion"
+item wishlist "Voldrethar, Dark Blade of Oblivion"
             
 Wishlisted by                           Item Name                               Order                                   Received                        
 RicksRet                                Voldrethar, Dark Blade of Oblivion      1                                       No                              
