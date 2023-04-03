@@ -204,17 +204,22 @@ def main():
     parser.add_argument("--file", default="character-json.json")
     args = parser.parse_args()
 
-
+    # Download data from server if url and cookie are provided
     if args.url and args.cookie:
         print("Downloading data from server")
         cookies = {"thats_my_bis_session": args.cookie}
         r = requests.get(args.url, cookies=cookies)
         if r.status_code == 200:
-            print("Data downloaded successfully!")
-            json_data = r.content
+            if "Content-Type" in r.headers and "json" in r.headers["Content-Type"]:
+                print("Data downloaded successfully!")
+                json_data = r.content
+            else:
+                print("Content Type was not correct. Try with a working Cookie/URL")
+                return
         else:
-            print("Error during request")
+            print("Error during request. Status code: ", r.status_code)
             return
+    # Try to read from a file otherwise
     else:
         json_data = open(args.file).read()
 
