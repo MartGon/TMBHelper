@@ -78,12 +78,12 @@ class TMBHelperCMD(cmd.Cmd):
     prompt = "\nPlease, type a command\n\n"
 
     def do_char(self, args):
-        'Retrieve information regarding a character loot history, wishlist or prios'
+        'Retrieve information regarding a character loot history, wishlist or prios.\nUsage: char [history/wishlist/prio] charname'
         characters = self.characters
 
         args = self.parse(args)
         if len(args) == 0:
-            print("")
+            print("Wrong number of arguments. Usage: char [history/wishlist/prio] charname")
             return
         
         action, charName = self.get_action_and_name(args)
@@ -140,11 +140,11 @@ class TMBHelperCMD(cmd.Cmd):
         return action, name
 
     def do_item(self, args):
-        'Retrieve information regarding a specific item in loot history, wishlist or prios\n [history, wishlist, prio]'
+        'Retrieve information regarding a specific item in loot history, wishlist or prios.\nUsage: item [history/wishlist/prio] "itemName"'
 
         args = self.parse(args)
         if len(args) == 0:
-            print("")
+            print('Wrong number of arguments. Usage: item [history/wishlist/prio] "itemName"')
             return
 
         action, itemName = self.get_action_and_name(args)

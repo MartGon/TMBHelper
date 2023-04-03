@@ -7,7 +7,7 @@ TMBHelper is a command line tool which aids querying data from your guild's loot
 In order to run this program you'll need:
 
 - Python3
-- TMB JSON Blob. You can download it from TMB web page in **Guild&rarr;Export&rarr;Giant JSON blob**
+- (Optional) TMB JSON Blob. You can download it from TMB web page in **Guild&rarr;Export&rarr;Giant JSON blob**
 
 ## How to use
 
