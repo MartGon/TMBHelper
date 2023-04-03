@@ -17,6 +17,12 @@ First run the program
 python3  tmb.py --file character-json.json
 ```
 
+You may download it directly from the server by providing a TMB session cookie and the JSON download url
+
+```
+python3  tmb.py --cookie eyBsts... --url https://thatsmybis.com/12345/pin-pals/export/characters-with-items/json
+```
+
 Then you'll be greeted with a prompt
 
 ```

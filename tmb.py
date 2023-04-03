@@ -119,7 +119,7 @@ class TMBHelperCMD(cmd.Cmd):
                 prios = self.get_char_items(char.prios.items(), lambda x : x["order"], False, extra)
 
                 print("Items prioritized to {0}".format(char.name))
-                self.print_list(prios, ["Item Name", "Priority", "Updated Prio", "Received"], ['itemName','sort_by', 'updated_prio', 'is_received'])
+                self.print_list(prios, ["Item Name", "Priority", "Actual Prio", "Received"], ['itemName','sort_by', 'updated_prio', 'is_received'])
 
     def get_char_items(self, itemList, sort_by, reverse=True, extra={}):
         items = []
