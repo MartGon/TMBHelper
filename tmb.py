@@ -2,6 +2,7 @@ import argparse
 import cmd
 import json
 import datetime
+import requests
 
 class Character:
 
@@ -22,19 +23,24 @@ class Character:
             recv[i["id"]] = item
         return recv
 
-def ReadDataFromJson(json_path):
+
+
+def ReadDataFromJson(json_data):
 
     characters = {}
     items = {}
-    with open(json_path) as f:
-        res = json.load(f)
 
-        for character in res:
-            characters[character["name"]] = (Character(character))
+    res = json.loads(json_data)
+
+    for character in res:
+        characters[character["name"]] = (Character(character))
     
     calculate_update_prios(characters)
 
     return characters, items
+
+def GetDataFromFile(json_path):
+    return open(json_path).read()
 
 def calculate_update_prios(characters):
     
@@ -193,10 +199,27 @@ class TMBHelperCMD(cmd.Cmd):
     
 def main():
     parser = argparse.ArgumentParser(prog='TMBConsultor', description='Queries TMB for quick searches', epilog='Call with --help to find a list of available commands')
+    parser.add_argument("--cookie")
+    parser.add_argument("--url")
     parser.add_argument("--file", default="character-json.json")
     args = parser.parse_args()
 
-    characters, items = ReadDataFromJson(args.file)
+
+    if args.url and args.cookie:
+        print("Downloading data from server")
+        cookies = {"thats_my_bis_session": args.cookie}
+        r = requests.get(args.url, cookies=cookies)
+        if r.status_code == 200:
+            print("Data downloaded successfully!")
+            json_data = r.content
+        else:
+            print("Error during request")
+            return
+    else:
+        json_data = open(args.file).read()
+
+
+    characters, items = ReadDataFromJson(json_data)
     cmd = TMBHelperCMD()
     cmd.characters = characters
     cmd.cmdloop()
