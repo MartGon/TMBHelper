@@ -58,8 +58,8 @@ WatsonWarrior                           Voldrethar, Dark Blade of Oblivion      
 
 Prioritized to                          Item Name                               Priority                                Actual Prio                             Received                        
 WatsonWarrior                           Voldrethar, Dark Blade of Oblivion      1                                       0                                       Yes
-RicksRet                                Voldrethar, Dark Blade of Oblivion      2                                       1                                       Yes
-HaroldHunter                            Voldrethar, Dark Blade of Oblivion      3                                       2                                       Yes
+RicksRet                                Voldrethar, Dark Blade of Oblivion      2                                       1                                       No
+HaroldHunter                            Voldrethar, Dark Blade of Oblivion      3                                       2                                       No
 ```
 
 Check only the wishlist
