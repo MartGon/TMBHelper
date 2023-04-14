@@ -43,21 +43,21 @@ class TMBHelperCMD(cmd.Cmd):
                 history = self.get_char_items(char.recv.items(), sort_by, True, extra)
 
                 print("Items received by {0}".format(char.name))
-                self.print_list(history, ["Item Name", "Date", "Wishlisted"], ['itemName','sort_by', 'is_wishlisted'])
+                self.print_list(history, {"Item Name" : 32, "Date" : 12, "Wishlisted" : 12}, ['itemName','sort_by', 'is_wishlisted'])
 
             if action is None or action == "wishlist":
                 extra = {"is_received" : lambda x : "Yes" if x["is_received"] else "No"}
                 wishlist = self.get_char_items(char.wishlist.items(), lambda x : x["order"], False, extra)
 
                 print("Items wishlisted by {0}".format(char.name))
-                self.print_list(wishlist, ["Item Name", "Order", "Received"], ['itemName','sort_by', 'is_received'])
+                self.print_list(wishlist, {"Item Name" : 32, "Order" : 12, "Received" : 12}, ['itemName','sort_by', 'is_received'])
 
             if action is None or action == "prio":
                 extra = {"is_received" : lambda i : "Yes" if i["is_received"] else "No", "updated_prio" : lambda i : i["updated_prio"]}
                 prios = self.get_char_items(char.prios.items(), lambda x : x["order"], False, extra)
 
                 print("Items prioritized to {0}".format(char.name))
-                self.print_list(prios, ["Item Name", "Priority", "Actual Prio", "Received"], ['itemName','sort_by', 'updated_prio', 'is_received'])
+                self.print_list(prios, {"Item Name" : 32,  "Priority" : 12, "Actual Prio" : 12, "Received" : 12}, ['itemName','sort_by', 'updated_prio', 'is_received'])
 
     def get_char_items(self, itemList, sort_by, reverse=True, extra={}):
         items = []
@@ -90,17 +90,17 @@ class TMBHelperCMD(cmd.Cmd):
         if action is None or action == "history":
             sort_by = lambda x : datetime.datetime.strptime(x["received_at"], "%Y-%m-%d %H:%M:%S").date()
             history = self.get_items(itemName, lambda x : x.recv.items(), sort_by)
-            self.print_list(history, ["Received by", "Item Name", "Date"], ['character', 'itemName','sort_by'])
+            self.print_list(history, {"Received by" : 16, "Item Name" : 32, "Date" : 16}, ['character', 'itemName','sort_by'])
 
         if action is None or action == "wishlist":
             extra = {"is_received" : lambda i, c : "Yes" if i["is_received"] else "No"}
             wishlist = self.get_items(itemName, lambda x : x.wishlist.items(), lambda x : x["order"], False, extra)
-            self.print_list(wishlist, ["Wishlisted by", "Item Name", "Order", "Received"], ['character', 'itemName','sort_by', 'is_received'])
+            self.print_list(wishlist, {"Wishlisted by" : 16, "Item Name" : 32, "Order" : 8, "Received" : 12}, ['character', 'itemName','sort_by', 'is_received'])
 
         if action is None or action == "prio":
             extra = {"is_received" : lambda i, c : "Yes" if i["is_received"] else "No", "updated_prio" : lambda i, c : i["updated_prio"]}
             prios = self.get_items(itemName, lambda x : x.prios.items(), lambda x : x["order"], False, extra)
-            self.print_list(prios, ["Prioritized to", "Item Name", "Priority", "Actual Prio", "Received"], ['character', 'itemName','sort_by', 'updated_prio', 'is_received'])
+            self.print_list(prios, {"Prioritized to" : 16, "Item Name" : 32, "Priority" : 12, "Actual Prio" : 12, "Received" : 12}, ['character', 'itemName','sort_by', 'updated_prio', 'is_received'])
 
     def get_items(self, itemName, itemList, sort_by, reverse=True, extra={}):
         items = []
@@ -116,13 +116,16 @@ class TMBHelperCMD(cmd.Cmd):
         return items
 
     def print_list(self, itemList, columns, keys):
-        for col in columns:
-            print("{0:<32s}\t".format(col), end='')
+        for col, size in columns.items():
+            print(("{0:<" + str(size) + "s}\t").format(col), end='')
         print()
-
+    
         for v in itemList:
-            for k in keys:
-                print("{0:<32s}\t".format(str(v[k])), end='')
+            for i in range(0, len(keys)):
+                k = keys[i]
+                key = list(columns.keys())[i]
+                size = columns[key]
+                print(("{0:<" + str(size) + "s}\t").format(str(v[k])), end='')
             print()
         print()
 
@@ -151,6 +154,8 @@ def main():
             if "Content-Type" in r.headers and "json" in r.headers["Content-Type"]:
                 print("Data downloaded successfully!")
                 json_data = r.content
+                with open(args.file, 'wb') as file:
+                    file.write(json_data)
             else:
                 print("Content Type was not correct. Try with a working Cookie/URL")
                 return
